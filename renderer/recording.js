@@ -5,7 +5,7 @@
     root.Recorder = factory(root.Util, root.ColorUtil);
   }
 })(typeof self !== 'undefined' ? self : this, function (Util, ColorUtil) {
-  const { trySafe } = Util;
+  const { trySafe, kenBurns } = Util;
   const { parseTextShadows } = ColorUtil;
 
   function pickMime() {
@@ -40,7 +40,7 @@
 
     const {
       settings, fx, audioEngine,
-      getPulse, hasVideos, bgVideoEls, vizCanvas,
+      getPulse, hasVideos, bgVideoEls, bgImgEls, vizCanvas,
       brand, marquee, title, artist, album, metaSub, customText,
       isPlayingClass, toast
     } = opts;
@@ -58,6 +58,16 @@
       const sw = W / scale, sh = H / scale;
       const sx = (vW - sw) / 2, sy = (vH - sh) / 2;
       const dW = W * pump, dH = H * pump;
+      ctx.drawImage(el, sx, sy, sw, sh, (W - dW) / 2, (H - dH) / 2, dW, dH);
+    }
+
+    function drawImageCover(ctx, el, W, H, zoom) {
+      const vW = el.naturalWidth, vH = el.naturalHeight;
+      if (!vW || !vH) return;
+      const scale = Math.max(W / vW, H / vH);
+      const sw = W / scale, sh = H / scale;
+      const sx = (vW - sw) / 2, sy = (vH - sh) / 2;
+      const dW = W * zoom, dH = H * zoom;
       ctx.drawImage(el, sx, sy, sw, sh, (W - dW) / 2, (H - dH) / 2, dW, dH);
     }
 
@@ -172,6 +182,7 @@
       if (hasVideos()) {
         const blur = Number(settings.blur) || 0;
         const pump = audioEngine.state.playing ? 1 + audioEngine.state.lv.bass * 0.16 + getPulse() * 0.05 : 1.02;
+        const nowMs = performance.now();
         if (blur > 0) rc.filter = `blur(${blur * pump}px)`;
         rc.globalAlpha = 1;
         for (const el of bgVideoEls) {
@@ -179,6 +190,13 @@
           rc.globalAlpha = parseFloat(el.style.opacity) || 0;
           if (rc.globalAlpha <= 0) continue;
           drawVideoCover(rc, el, W, H, pump);
+        }
+        for (let i = 0; i < (bgImgEls || []).length; i++) {
+          const el = bgImgEls[i];
+          if (!el.naturalWidth) continue;
+          rc.globalAlpha = parseFloat(el.style.opacity) || 0;
+          if (rc.globalAlpha <= 0) continue;
+          drawImageCover(rc, el, W, H, pump * kenBurns(nowMs, i * 2.1));
         }
         rc.filter = 'none';
         rc.globalAlpha = 1;

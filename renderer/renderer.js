@@ -7,7 +7,14 @@
   const CROSSFADE_MS = 900;
   const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'opus'];
   const VIDEO_EXTS = ['mp4', 'webm', 'mov', 'm4v', 'mkv'];
+  const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
+  const IMAGE_MS = 15000;
   const bgVideoEls = [$('#bg-video'), $('#bg-video-2')];
+  const bgImgEls = [$('#bg-img'), $('#bg-img-2')];
+  const bgSlots = [
+    { video: bgVideoEls[0], img: bgImgEls[0] },
+    { video: bgVideoEls[1], img: bgImgEls[1] }
+  ];
   bgVideoEls.forEach((el) => { el.style.transition = 'none'; });
 
   const body = document.body;
@@ -56,7 +63,7 @@
   const CAM_Y_SWAY_PERIOD = 0.31;
   const CAM_SWAY_AMOUNT = 0.010;
 
-  const { clamp, fmtTime, trySafe } = window.Util;
+  const { clamp, fmtTime, trySafe, kenBurns } = window.Util;
   const { hexToRgb, mixColor, rgbaStr } = window.ColorUtil;
 
   const fx = { accent: hexToRgb(settings.accent), vizTop: hexToRgb(settings.vizTop), vizBot: hexToRgb(settings.vizBottom), bg: hexToRgb(settings.bgColor) };
@@ -98,8 +105,9 @@
 
   const videoBg = window.VideoBg.create({
     manager,
-    elements: bgVideoEls,
+    slots: bgSlots,
     crossfadeMs: CROSSFADE_MS,
+    imageMs: IMAGE_MS,
     toast: (msg) => ui.toast(msg)
   });
 
@@ -136,6 +144,7 @@
     getPulse: () => pulse,
     hasVideos: () => videoBg.hasVideos(),
     bgVideoEls,
+    bgImgEls,
     vizCanvas,
     brand: brandEl,
     marquee,
@@ -161,13 +170,14 @@
     settings,
     saveSettings: appSettings.save,
     playAudioFile: (p, n) => playAudioFile(p, n),
-    addVideoFile: (p, n) => addVideoFile(p, n),
+    addVideoFile: (p, n, k) => addVideoFile(p, n, k),
     audioEngine,
     videoBg,
     getFullscreen: () => state.fullscreen,
     getScrubbing: () => scrubber.isScrubbing(),
     audioExts: AUDIO_EXTS,
-    videoExts: VIDEO_EXTS
+    videoExts: VIDEO_EXTS,
+    imageExts: IMAGE_EXTS
   });
 
   async function probeAudioDuration(path) {
@@ -187,6 +197,7 @@
     toast: (msg) => ui.toast(msg),
     audioExts: AUDIO_EXTS,
     videoExts: VIDEO_EXTS,
+    imageExts: IMAGE_EXTS,
     probeAudioDuration,
     onSelectAudio: () => {},
     onSelectVideo: () => videoBg.apply(),
@@ -346,9 +357,9 @@
     playlistUI.renderList('audio');
   }
 
-  function addVideoFile(path, fileName) {
+  function addVideoFile(path, fileName, kind) {
     if (!path) return;
-    manager.addVideoTrack(path, fileName);
+    manager.addVideoTrack(path, fileName, kind);
     videoBg.apply();
     playlistUI.renderList('video');
   }
@@ -463,8 +474,13 @@
       const pump = audioEngine.state.playing ? 1 + audioEngine.state.lv.bass * PUMP_BASS + pulse * PUMP_PULSE : PUMP_IDLE;
       const shakeBass = settings.shake && audioEngine.state.playing ? Math.max(audioEngine.state.lv.bass * SHAKE_BASS, tremor * SHAKE_TREMOR) : 0;
       const shakeRot = (Math.random() - 0.5) * shakeBass * SHAKE_ROT_MULT;
+      const nowMs = performance.now();
       bgVideoEls.forEach((el) => {
         el.style.transform = `rotate(${shakeRot.toFixed(6)}rad) scale(${pump.toFixed(4)})`;
+      });
+      bgImgEls.forEach((el, i) => {
+        const kb = kenBurns(nowMs, i * 2.1);
+        el.style.transform = `rotate(${shakeRot.toFixed(6)}rad) scale(${(pump * kb).toFixed(4)})`;
       });
     }
     videoBg.update(now);

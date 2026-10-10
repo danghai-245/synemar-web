@@ -18,6 +18,7 @@
     const toast = opts.toast;
     const audioExts = opts.audioExts;
     const videoExts = opts.videoExts;
+    const imageExts = opts.imageExts || [];
     const fmtTime = Util.fmtTime;
     const $ = (s) => document.querySelector(s);
     const $$ = (s) => Array.from(document.querySelectorAll(s));
@@ -97,7 +98,9 @@
       const path = row.querySelector('.track-path');
       const indicator = row.querySelector('.track-indicator');
       const duration = row.querySelector('.track-duration');
-      if (name.textContent !== (track.fileName || track.path)) name.textContent = track.fileName || track.path;
+      const badge = (kind === 'video' && track.kind === 'image') ? '🖼 ' : '';
+      const label = badge + (track.fileName || track.path);
+      if (name.textContent !== label) name.textContent = label;
       if (path.textContent !== track.path) path.textContent = track.path;
       if (indicator) indicator.style.display = isCurrent ? '' : 'none';
       if (duration) {
@@ -120,7 +123,7 @@
         if (kind === 'audio') manager.removeAudioAt(index);
         else manager.removeVideoAt(index);
         render();
-        toast(kind === 'audio' ? 'Track removed' : 'Video removed');
+        toast(kind === 'audio' ? 'Track removed' : 'Background removed');
       });
       return remove;
     }
@@ -232,7 +235,8 @@
             if (!filePath) return;
             const ext = extOf(file.name);
             if (audioExts.includes(ext)) { manager.addAudioTrack(filePath, file.name); audioAdded += 1; }
-            else if (videoExts.includes(ext)) { manager.addVideoTrack(filePath, file.name); videoAdded += 1; }
+            else if (videoExts.includes(ext)) { manager.addVideoTrack(filePath, file.name, 'video'); videoAdded += 1; }
+            else if (imageExts.includes(ext)) { manager.addVideoTrack(filePath, file.name, 'image'); videoAdded += 1; }
           });
           if (audioAdded || videoAdded) {
             render();
@@ -259,7 +263,7 @@
     function isMediaFile(file) {
       if (!file) return false;
       const ext = extOf(file.name || '');
-      return audioExts.includes(ext) || videoExts.includes(ext);
+      return audioExts.includes(ext) || videoExts.includes(ext) || imageExts.includes(ext);
     }
 
     function nearestRowIndex(target) {
@@ -275,12 +279,13 @@
         items.forEach((it) => {
           const p = it && it.path ? it.path : it;
           const n = it && it.fileName ? it.fileName : '';
+          const k = it && it.kind === 'image' ? 'image' : 'video';
           if (kind === 'audio') manager.addAudioTrack(p, n);
-          else manager.addVideoTrack(p, n);
+          else manager.addVideoTrack(p, n, k);
         });
         render();
         if (kind === 'audio') probeDurations('audio');
-        toast(items.length === 1 ? (kind === 'audio' ? 'Track added' : 'Video added') : (kind === 'audio' ? 'Tracks added' : 'Videos added'));
+        toast(items.length === 1 ? (kind === 'audio' ? 'Track added' : 'Background added') : (kind === 'audio' ? 'Tracks added' : 'Backgrounds added'));
       })();
     }
 

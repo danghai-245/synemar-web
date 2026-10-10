@@ -19,6 +19,8 @@
 
   <video id="bg-video" playsinline muted crossorigin="anonymous"></video>
   <video id="bg-video-2" playsinline muted crossorigin="anonymous"></video>
+  <img id="bg-img" alt="">
+  <img id="bg-img-2" alt="">
   <div id="bg-tint"></div>
   <div id="bg-vignette"></div>
 
@@ -79,7 +81,7 @@
       <div class="empty-icon">&#9835;</div>
       <h2>Welcome to Synemar</h2>
       <p class="empty-sub">Open the playlist to add your music and videos, or simply drop files anywhere on the window.
-        Music drives the visualizer and plays one track after another, while background videos crossfade independently on their own loop.</p>
+        Music drives the visualizer and plays one track after another, while background videos and photos crossfade independently on their own loop.</p>
       <div class="empty-actions">
         <button id="btn-pick-vid" class="ghost primary" aria-label="Open the playlist">&#9776; Open the playlist</button>
       </div>
@@ -246,13 +248,13 @@
         </section>
         <section class="playlist-col">
           <header class="playlist-col-header">
-            <h4>Video</h4>
-            <span class="col-note">crossfades on its own loop</span>
+            <h4>Backgrounds</h4>
+            <span class="col-note">videos &amp; photos · crossfade on their own loop</span>
           </header>
-          <input type="text" id="video-filter" class="playlist-filter" placeholder="Filter video…" aria-label="Filter video files">
-          <button id="btn-add-video" class="ghost primary add-media">&#43; Add Video Files</button>
+          <input type="text" id="video-filter" class="playlist-filter" placeholder="Filter backgrounds…" aria-label="Filter background videos and photos">
+          <button id="btn-add-video" class="ghost primary add-media">&#43; Add Videos &amp; Photos</button>
           <div id="video-track-list" class="track-list" data-type="video"></div>
-          <div class="track-list-empty">Drop video files here</div>
+          <div class="track-list-empty">Drop video or photo files here</div>
         </section>
       </div>
       <footer class="playlist-footer">

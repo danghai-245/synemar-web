@@ -36,7 +36,7 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-#bg-video, #bg-video-2 {
+#bg-video, #bg-video-2, #bg-img, #bg-img-2 {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -47,9 +47,12 @@ button:focus-visible {
   display: none;
   pointer-events: none;
 }
-body.has-vid #bg-video, body.has-vid #bg-video-2 { display: block; }
+body.has-vid #bg-video, body.has-vid #bg-video-2,
+body.has-vid #bg-img, body.has-vid #bg-img-2 { display: block; }
 body.has-vid #bg-video.video-in,
-body.has-vid #bg-video-2.video-in { z-index: 1; }
+body.has-vid #bg-video-2.video-in,
+body.has-vid #bg-img.video-in,
+body.has-vid #bg-img-2.video-in { z-index: 1; }
 
 #bg-tint {
   position: fixed;

@@ -166,8 +166,11 @@
       return files.map(function (f) { return { path: registerFile(f), fileName: f.name }; });
     },
     selectMultipleVideo: async function () {
-      var files = await pickFiles('video/*,.mp4,.webm,.mov,.m4v,.mkv', true);
-      return files.map(function (f) { return { path: registerFile(f), fileName: f.name }; });
+      var files = await pickFiles('video/*,.mp4,.webm,.mov,.m4v,.mkv,image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp', true);
+      return files.map(function (f) {
+        var isImg = /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name);
+        return { path: registerFile(f), fileName: f.name, kind: isImg ? 'image' : 'video' };
+      });
     },
     savePlaylistFile: async function (json) {
       downloadBlob(new Blob([json], { type: 'application/json' }), 'synemar-playlist.json');

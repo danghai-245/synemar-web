@@ -8,7 +8,7 @@
   function create(opts) {
     const {
       settings, saveSettings, playAudioFile, addVideoFile, videoBg, audioEngine,
-      getFullscreen, getScrubbing, audioExts, videoExts
+      getFullscreen, getScrubbing, audioExts, videoExts, imageExts
     } = opts;
     const body = document.body;
     const $ = (s) => document.querySelector(s);
@@ -61,7 +61,9 @@
       if (audioExts.includes(ext)) {
         await playAudioFile(p, name);
       } else if (videoExts.includes(ext)) {
-        addVideoFile(p, name);
+        addVideoFile(p, name, 'video');
+      } else if (imageExts.includes(ext)) {
+        addVideoFile(p, name, 'image');
       } else {
         toast(`Can't use "${name}".`);
       }

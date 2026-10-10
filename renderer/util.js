@@ -19,5 +19,9 @@
 
   function nextPow2(v) { let p = 16; while (p < v) p <<= 1; return Math.min(p, 8192); }
 
-  return { clamp, fmtTime, nextPow2, trySafe };
+  function kenBurns(nowMs, phase) {
+    return 1.07 + 0.05 * Math.sin(nowMs / 7000 + (phase || 0));
+  }
+
+  return { clamp, fmtTime, nextPow2, trySafe, kenBurns };
 });

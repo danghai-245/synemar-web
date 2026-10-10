@@ -7,9 +7,15 @@
 })(typeof self !== 'undefined' ? self : this, function (Util) {
   const { trySafe } = Util;
 
+  const IMAGE_MS_DEFAULT = 15000;
+
   function mediaUrl(p) {
     if (/^blob:/.test(p)) return p;
     return 'media://file/?path=' + encodeURIComponent(p);
+  }
+
+  function isVideoEl(el) {
+    return !!el && el.tagName === 'VIDEO';
   }
 
   function hasReadyFrame(el) {
@@ -24,25 +30,38 @@
     return typeof el.addEventListener === 'function' && typeof el.removeEventListener === 'function';
   }
 
-  function stopVideoEl(el) {
-    trySafe(() => el.pause());
-    el.removeAttribute('src');
-    trySafe(() => el.load());
+  function setOpacity(el, v) {
+    el.style.opacity = v;
+  }
+
+  function setLayer(el, on) {
+    if (typeof el.classList !== 'undefined') {
+      const has = el.classList.contains('video-in');
+      if (on && !has) el.classList.add('video-in');
+      else if (!on && has) el.classList.remove('video-in');
+    }
+  }
+
+  function clearMediaEl(el) {
+    if (isVideoEl(el)) {
+      trySafe(() => el.pause());
+      el.removeAttribute('src');
+      trySafe(() => el.load());
+    } else {
+      el.removeAttribute('src');
+    }
     setOpacity(el, 0);
     setLayer(el, false);
   }
 
-  function startVideoEl(el, path) {
-    el.src = mediaUrl(path);
-    el.load();
-    const pr = el.play();
-    if (pr) pr.catch(() => {});
-  }
-
-  function loadVideoEl(el, path) {
-    el.src = mediaUrl(path);
-    el.load();
-    trySafe(() => el.pause());
+  function normalizeTracks(tracks) {
+    return (tracks || []).map((t) => {
+      if (typeof t === 'string') return { path: t.trim(), kind: 'video' };
+      return {
+        path: String((t && t.path) || '').trim(),
+        kind: t && t.kind === 'image' ? 'image' : 'video'
+      };
+    }).filter((t) => t.path);
   }
 
   function waitReady(el, timeoutMs, onReady, schedule, cancel) {
@@ -64,75 +83,91 @@
     timer = schedule(() => finish(), timeoutMs);
   }
 
-  function setOpacity(el, v) {
-    el.style.opacity = v;
-  }
-
-  function setLayer(el, on) {
-    if (typeof el.classList !== 'undefined') {
-      const has = el.classList.contains('video-in');
-      if (on && !has) el.classList.add('video-in');
-      else if (!on && has) el.classList.remove('video-in');
-    }
-  }
-
   function createPlaylist(opts) {
-    const els = opts.elements;
+    const slots = opts.slots;
     const crossfadeMs = opts.crossfadeMs;
+    const imageMs = opts.imageMs || IMAGE_MS_DEFAULT;
     const schedule = opts.schedule || ((fn, ms) => setTimeout(fn, ms));
     const cancel = opts.cancel || ((t) => clearTimeout(t));
     const currentTime = opts.currentTime || (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
     const readiness = opts.waitReady || waitReady;
 
-    let activeVidIdx = 0;
+    let activeSlotIdx = 0;
     let activePlIdx = 0;
+    let activeEl = null;
     let fade = null;
     let lastEndedAt = -Infinity;
     let currentList = [];
     let pendingEnded = false;
     let switching = false;
+    let slotStartedAt = 0;
 
-    function listOf(videos) {
-      return (videos || []).map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean);
+    function activeSlot() {
+      return slots[activeSlotIdx];
     }
 
-    function activeEl() {
-      return els[activeVidIdx];
+    function otherSlot() {
+      return slots[1 - activeSlotIdx];
     }
 
-    function otherEl() {
-      return els[1 - activeVidIdx];
+    function stopSlot(slot) {
+      clearMediaEl(slot.video);
+      clearMediaEl(slot.img);
     }
 
-    function prepareNextVideo(list) {
+    function showTrackInSlot(slot, track) {
+      if (track.kind === 'image') {
+        clearMediaEl(slot.video);
+        slot.img.src = mediaUrl(track.path);
+        return slot.img;
+      }
+      clearMediaEl(slot.img);
+      slot.video.src = mediaUrl(track.path);
+      slot.video.load();
+      const pr = slot.video.play();
+      if (pr) pr.catch(() => {});
+      return slot.video;
+    }
+
+    function preloadTrackInSlot(slot, track) {
+      const url = mediaUrl(track.path);
+      if (track.kind === 'image') {
+        if (slot.img.getAttribute('src') !== url) slot.img.src = url;
+      } else if (slot.video.getAttribute('src') !== url) {
+        slot.video.src = url;
+        slot.video.load();
+        trySafe(() => slot.video.pause());
+      }
+    }
+
+    function prepareNext(list) {
       if (list.length < 2) return;
-      const nextPl = (activePlIdx + 1) % list.length;
-      const nextEl = otherEl();
-      loadVideoEl(nextEl, list[nextPl]);
+      preloadTrackInSlot(otherSlot(), list[(activePlIdx + 1) % list.length]);
     }
 
-    function startPlaylist(list, startIndex) {
+    function startPlaylist(tracks, startIndex) {
       fade = null;
       pendingEnded = false;
       switching = false;
       lastEndedAt = -Infinity;
-      currentList = list;
+      currentList = normalizeTracks(tracks);
+      const list = currentList;
       if (!list.length) {
-        els.forEach(stopVideoEl);
-        activeVidIdx = 0;
+        slots.forEach(stopSlot);
+        activeSlotIdx = 0;
         activePlIdx = 0;
+        activeEl = null;
         return;
       }
-      if (typeof startIndex === 'number' && startIndex >= 0 && startIndex < list.length) {
-        activePlIdx = startIndex;
-      } else {
-        activePlIdx = Math.min(activePlIdx, list.length - 1);
-      }
-      setOpacity(activeEl(), 1);
-      setLayer(activeEl(), false);
-      stopVideoEl(otherEl());
-      startVideoEl(activeEl(), list[activePlIdx]);
-      prepareNextVideo(list);
+      activePlIdx = (typeof startIndex === 'number' && startIndex >= 0 && startIndex < list.length)
+        ? startIndex
+        : Math.min(activePlIdx, list.length - 1);
+      stopSlot(otherSlot());
+      activeEl = showTrackInSlot(activeSlot(), list[activePlIdx]);
+      setOpacity(activeEl, 1);
+      setLayer(activeEl, false);
+      slotStartedAt = currentTime();
+      prepareNext(list);
     }
 
     function tick(now) {
@@ -142,21 +177,19 @@
       if (t > 1) t = 1;
       const inc = 1 - Math.pow(1 - t, 3);
       setOpacity(fade.inEl, inc);
-      setOpacity(fade.outEl, 1 - Math.pow(t, 3));
+      if (fade.outEl) setOpacity(fade.outEl, 1 - Math.pow(t, 3));
       if (t >= 1) {
-        setOpacity(fade.outEl, 0);
-        setLayer(fade.outEl, false);
+        if (fade.outEl) clearMediaEl(fade.outEl);
         setLayer(fade.inEl, false);
-        stopVideoEl(fade.outEl);
         fade = null;
         if (pendingEnded) {
           pendingEnded = false;
-          handleVideoEnded(currentList);
+          advance(currentList);
         }
       }
     }
 
-    function handleVideoEnded(list) {
+    function advance(list) {
       currentList = list;
       if (!list.length) return;
       if (fade) {
@@ -166,21 +199,23 @@
       }
       if (switching) return;
       if (list.length < 2) {
-        const el = activeEl();
-        el.currentTime = 0;
-        el.play().catch(() => {});
+        const t = list[activePlIdx] || list[0];
+        if (t.kind === 'video' && activeEl && isVideoEl(activeEl)) {
+          activeEl.currentTime = 0;
+          const pr = activeEl.play();
+          if (pr) pr.catch(() => {});
+        }
+        slotStartedAt = currentTime();
         return;
       }
       const now = currentTime();
       if (now - lastEndedAt < crossfadeMs) return;
       lastEndedAt = now;
       const nextPl = (activePlIdx + 1) % list.length;
-      const nextEl = otherEl();
-      const oldEl = activeEl();
-      const nextUrl = mediaUrl(list[nextPl]);
-      if (nextEl.getAttribute('src') !== nextUrl) {
-        loadVideoEl(nextEl, list[nextPl]);
-      }
+      const nextSlot = otherSlot();
+      const oldEl = activeEl;
+      preloadTrackInSlot(nextSlot, list[nextPl]);
+      const nextEl = list[nextPl].kind === 'image' ? nextSlot.img : nextSlot.video;
       switching = true;
       readiness(nextEl, crossfadeMs, () => {
         switching = false;
@@ -189,29 +224,38 @@
     }
 
     function switchTo(nextEl, oldEl, list, nextPl) {
-      const pr = nextEl.play();
-      if (pr) pr.catch(() => {});
+      if (isVideoEl(nextEl)) {
+        const pr = nextEl.play();
+        if (pr) pr.catch(() => {});
+      }
       setOpacity(nextEl, 0);
-      setOpacity(oldEl, 1);
+      if (oldEl) setOpacity(oldEl, 1);
       setLayer(nextEl, true);
       fade = { inEl: nextEl, outEl: oldEl, start: currentTime(), dur: crossfadeMs };
-      activeVidIdx = 1 - activeVidIdx;
+      activeSlotIdx = 1 - activeSlotIdx;
       activePlIdx = nextPl;
-      prepareNextVideo(list);
+      activeEl = nextEl;
+      slotStartedAt = currentTime();
+      prepareNext(list);
     }
 
     return {
-      handleVideoEnded(videos) {
-        return handleVideoEnded(listOf(videos));
+      handleTrackEnded(tracks) {
+        return advance(normalizeTracks(tracks));
       },
-      startPlaylist(videos, startIndex) {
-        return startPlaylist(listOf(videos), startIndex);
+      startPlaylist(tracks, startIndex) {
+        return startPlaylist(tracks, startIndex);
       },
       update(now) {
         tick(now);
         if (!fade && !pendingEnded && !switching && currentList.length) {
-          const el = activeEl();
-          if (el && el.ended) handleVideoEnded(currentList);
+          const t = currentList[activePlIdx];
+          if (!t) return;
+          if (t.kind === 'image') {
+            if (now - slotStartedAt > imageMs) advance(currentList);
+          } else if (activeEl && activeEl.ended) {
+            advance(currentList);
+          }
         }
       },
       get currentIndex() {
@@ -220,5 +264,5 @@
     };
   }
 
-  return { createPlaylist, mediaUrl, stopVideoEl, startVideoEl };
+  return { createPlaylist, mediaUrl };
 });

@@ -26,7 +26,8 @@ Or deploy the folder as-is to GitHub Pages / Netlify / Vercel.
 - Music visualizer driven by the Web Audio FFT: classic bars, radial sunburst, or off
 - Beat detection: camera shake, pulsing rings, bass-reactive background videos
 - Particles, smoke, aurora glow, golden spiral, CRT scanlines, film grain, VHS wobble
-- Combined audio + video playlist (plays independently, videos crossfade)
+- Combined audio + background playlist (play independently; background videos and
+  photos crossfade on their own loop, photos get a slow Ken Burns zoom + beat pump)
 - Song title/artist/album read from audio tags (MP3/MP4/FLAC via bundled jsmediatags)
 - One-press recording to MP4 (Chrome/Edge/Safari) or WebM (Firefox) via MediaRecorder
 - Recording size presets: 1080p, 1440p, 4K, 1:1, 9:16 — recordings match the preset

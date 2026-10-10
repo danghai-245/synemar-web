@@ -25,8 +25,8 @@
     return p ? String(p).split(/[\\/]/).pop() : '';
   }
 
-  function toTrack(p, fileName) {
-    return { path: String(p), fileName: fileName || baseName(p) };
+  function toTrack(p, fileName, kind) {
+    return { path: String(p), fileName: fileName || baseName(p), kind: kind === 'image' ? 'image' : 'video' };
   }
 
   function isTrack(t) {
@@ -37,7 +37,8 @@
     const list = Array.isArray(tracks) ? tracks.filter(isTrack) : [];
     return list.map((t) => ({
       path: t.path,
-      fileName: typeof t.fileName === 'string' ? t.fileName : baseName(t.path)
+      fileName: typeof t.fileName === 'string' ? t.fileName : baseName(t.path),
+      kind: t.kind === 'image' ? 'image' : 'video'
     }));
   }
 
@@ -152,10 +153,10 @@
       return state.audioTracks[state.audioTracks.length - 1];
     }
 
-    function addVideoTrack(path, fileName) {
+    function addVideoTrack(path, fileName, kind) {
       if (!path) return null;
       const prevIndex = state.currentVideoIndex;
-      state.videoTracks.push(toTrack(path, fileName));
+      state.videoTracks.push(toTrack(path, fileName, kind));
       if (state.currentVideoIndex < 0) state.currentVideoIndex = 0;
       save();
       emitVideo(prevIndex);

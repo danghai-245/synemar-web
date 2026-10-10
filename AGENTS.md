@@ -18,14 +18,19 @@ no build step. Deploy by serving the folder as-is (GitHub Pages friendly).
   `particles.js`, `smoke.js`), playlist state (`playlistManager.js`, persisted in
   `localStorage` under `neoneq.playlist`), recording (`recording.js`).
 - Web-specific adaptations (kept minimal, all in the fork):
-  - `playlist.js` `mediaUrl()` passes `blob:` URLs through untouched.
+  - `playlist.js` `mediaUrl()` passes `blob:` URLs through untouched; the
+    crossfade engine works on two `{video, img}` slots and handles `video` +
+    `image` track kinds (videos advance on `ended`, photos every `imageMs`).
   - `playlistManager.js` `addAudioTrack/addVideoTrack` take an optional `fileName`
-    (blob URLs have no readable name).
-  - `renderer.js` threads `fileName` through `playAudioFile`/`addVideoFile`,
-    passes `getOutputSize` into the Recorder, and prunes dead `blob:` tracks after
-    `manager.load()` (blob URLs die on reload).
+    (blob URLs have no readable name); background tracks carry
+    `kind: 'video'|'image'`, preserved by `sanitize()`.
+  - `renderer.js` threads `fileName`/`kind` through `playAudioFile`/`addVideoFile`,
+    passes `getOutputSize` into the Recorder, prunes dead `blob:` tracks after
+    `manager.load()` (blob URLs die on reload), and applies the Ken Burns zoom
+    (`Util.kenBurns`) to photo backgrounds each frame.
   - `recording.js` `captureComposite()` renders at the chosen recording size
-    (default: screen), scaling the DOM overlay layer to match; capture DPR capped at 2.
+    (default: screen), scaling the DOM overlay layer to match; draws photo
+    backgrounds with the same Ken Burns math as the screen; capture DPR capped at 2.
   - `ui.js` canvas presets set the recording size; size note reflects it.
   - `styles.css` ends with a touch/small-screen block (`@media (max-width: 720px)`,
     `@media (pointer: coarse)`).

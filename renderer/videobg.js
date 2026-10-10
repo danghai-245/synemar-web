@@ -7,22 +7,25 @@
 })(typeof self !== 'undefined' ? self : this, function (PlaylistEngine) {
   function create(opts) {
     const {
-      manager, elements, crossfadeMs, toast
+      manager, slots, crossfadeMs, imageMs, toast
     } = opts;
 
-    const playlist = PlaylistEngine.createPlaylist({ elements, crossfadeMs });
+    const playlist = PlaylistEngine.createPlaylist({ slots, crossfadeMs, imageMs });
     let appliedListKey = null;
 
-    function videoList() {
-      return manager.state.videoTracks.map((t) => t.path);
+    function trackList() {
+      return manager.state.videoTracks.map((t) => ({
+        path: t.path,
+        kind: t.kind === 'image' ? 'image' : 'video'
+      }));
     }
 
     function hasVideos() {
-      return videoList().length > 0;
+      return trackList().length > 0;
     }
 
     function apply() {
-      const list = videoList();
+      const list = trackList();
       document.body.classList.toggle('has-vid', list.length > 0);
       if (!list.length) {
         appliedListKey = null;
@@ -36,15 +39,17 @@
       }
     }
 
-    function handleVideoEnded() {
-      playlist.handleVideoEnded(videoList());
+    function handleTrackEnded() {
+      playlist.handleTrackEnded(trackList());
     }
 
-    elements.forEach((el) => {
-      el.addEventListener('error', () => {
-        if (hasVideos()) toast('Could not play one of the background videos.');
+    slots.forEach((slot) => {
+      [slot.video, slot.img].forEach((el) => {
+        el.addEventListener('error', () => {
+          if (hasVideos()) toast('Could not load one of the background files.');
+        });
       });
-      el.addEventListener('ended', handleVideoEnded);
+      slot.video.addEventListener('ended', handleTrackEnded);
     });
 
     return {
