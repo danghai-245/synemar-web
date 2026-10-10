@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0e14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="app.svg" type="image/svg+xml">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self';">
+  <title>Synemar Web</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="renderer/styles.css">
+</head>
+<body>
+
+  <video id="bg-video" playsinline muted crossorigin="anonymous"></video>
+  <video id="bg-video-2" playsinline muted crossorigin="anonymous"></video>
+  <div id="bg-tint"></div>
+  <div id="bg-vignette"></div>
+
+  <canvas id="viz"></canvas>
+
+  <div class="brand" id="brand">
+    <div class="eq"><span></span><span></span><span></span><span></span><span></span></div>
+    <span>SYNEMAR</span>
+  </div>
+
+  <div id="marquee">
+    <h1 id="title"></h1>
+    <div class="meta-sub" id="meta-sub">
+      <span id="artist"></span>
+      <span class="sep" id="sub-sep">&#9679;</span>
+      <span id="album"></span>
+    </div>
+  </div>
+
+  <div id="custom-text"></div>
+
+  <div id="dock" class="glass">
+    <div id="scrub-wrap">
+      <span class="t-time" id="t-current">0:00</span>
+      <canvas id="scrubber" role="slider" aria-label="Seek within the current track" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></canvas>
+      <span class="t-time" id="t-total">0:00</span>
+      <div id="scrub-tip" class="hidden" aria-hidden="true">0:00</div>
+    </div>
+    <div id="transport-row">
+      <div class="cluster left">
+        <button id="btn-playlist" class="ghost" title="Playlist (Ctrl+P)" aria-label="Playlist (Ctrl+P)">&#9776; Playlist</button>
+        <button id="btn-viz" class="ghost" title="Switch visualizer (V)" aria-label="Switch visualizer (V)"><span class="viz-icon">&#9673;</span> <span class="viz-label">Radial Visualizer</span></button>
+        <button id="btn-mute" class="trl" title="Mute (M)" aria-label="Mute (M)">&#9834;</button>
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" title="Volume" aria-label="Volume">
+      </div>
+      <div class="cluster center">
+        <button id="btn-rew" class="trl" title="-10s" aria-label="Rewind 10 seconds">&#9198;</button>
+        <button id="btn-play" class="trl play" title="Play / Pause (Space)" aria-label="Play or Pause (Space)">&#9654;</button>
+        <button id="btn-fwd" class="trl" title="+10s" aria-label="Forward 10 seconds">&#9197;</button>
+      </div>
+      <div class="cluster right">
+        <button id="btn-rec" class="trl rec-dot" title="Record screen + audio (R)" aria-label="Record screen and audio (R)">&#9679;</button>
+        <button id="btn-fs" class="trl" title="Fullscreen (F)" aria-label="Toggle fullscreen (F)">&#10697;</button>
+        <button id="btn-settings" class="trl" title="Settings (Ctrl+,)" aria-label="Settings (Ctrl+, )">&#9881;</button>
+        <button id="btn-help" class="trl" title="Shortcuts (?)" aria-label="Keyboard shortcuts (?)">?</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="btn-settings-plain" class="trl ghost" title="Settings (Ctrl+,)" aria-label="Settings (Ctrl+, )">&#9881;</button>
+
+  <div id="dropveil">
+    <div class="drop-hint">Drop to load</div>
+  </div>
+
+  <div id="empty">
+    <div class="empty-card glass">
+      <div class="empty-icon">&#9835;</div>
+      <h2>Welcome to Synemar</h2>
+      <p class="empty-sub">Open the playlist to add your music and videos, or simply drop files anywhere on the window.
+        Music drives the visualizer and plays one track after another, while background videos crossfade independently on their own loop.</p>
+      <div class="empty-actions">
+        <button id="btn-pick-vid" class="ghost primary" aria-label="Open the playlist">&#9776; Open the playlist</button>
+      </div>
+      <p class="hint">Ctrl+P playlist &middot; F fullscreen &middot; H hide UI &middot; ? shortcuts &middot; Ctrl+, settings</p>
+    </div>
+  </div>
+
+  <div id="settings" class="overlay hidden">
+    <div class="settings-panel glass">
+      <header>
+        <h3>Settings</h3>
+        <button id="btn-close-settings" class="trl" aria-label="Close settings">&#10005;</button>
+      </header>
+
+      <section>
+        <h4>Background</h4>
+        <div class="setting-row">
+          <label>Fallback color</label>
+          <span class="color-field"><input type="color" id="set-bgcolor" value="#0b0e14" data-key="bgColor"><code id="hex-bgcolor">#0b0e14</code></span>
+        </div>
+        <div class="setting-row">
+          <label>Dimming <em id="val-dim">55%</em></label>
+          <input type="range" id="set-dim" min="0" max="0.9" step="0.01" value="0.55">
+        </div>
+        <div class="setting-row">
+          <label>Blur <em id="val-blur">6px</em></label>
+          <input type="range" id="set-blur" min="0" max="24" step="1" value="6">
+        </div>
+      </section>
+
+      <section>
+        <h4>Colors</h4>
+        <div class="setting-row">
+          <label>Text</label>
+          <span class="color-field"><input type="color" id="set-text" value="#eef4ff" data-key="textColor"><code id="hex-text">#eef4ff</code></span>
+        </div>
+        <div class="setting-row">
+          <label>Accent</label>
+          <span class="color-field"><input type="color" id="set-accent" value="#5eead4" data-key="accent"><code id="hex-accent">#5eead4</code></span>
+        </div>
+        <div class="setting-row">
+          <label>Viz top</label>
+          <span class="color-field"><input type="color" id="set-viztop" value="#4ee0ff" data-key="vizTop"><code id="hex-viztop">#4ee0ff</code></span>
+        </div>
+        <div class="setting-row">
+          <label>Viz bottom</label>
+          <span class="color-field"><input type="color" id="set-vizbot" value="#ff2970" data-key="vizBottom"><code id="hex-vizbot">#ff2970</code></span>
+        </div>
+      </section>
+
+      <section>
+        <h4>Visualizer</h4>
+        <div class="setting-row">
+          <label>Bars <em id="val-bars">96</em></label>
+          <input type="range" id="set-bars" min="24" max="160" step="2" value="96">
+        </div>
+        <div class="setting-row">
+          <label>Smoothing <em id="val-smooth">0.82</em></label>
+          <input type="range" id="set-smooth" min="0.1" max="0.96" step="0.01" value="0.82">
+        </div>
+        <div class="setting-row">
+          <label>Hue shifting</label>
+          <input type="checkbox" id="set-hue" checked>
+        </div>
+        <div class="setting-row">
+          <label>Particle energy <em id="val-inten">80%</em></label>
+          <input type="range" id="set-inten" min="0" max="100" step="1" value="80">
+        </div>
+        <div class="setting-row">
+          <label>Beat shake</label>
+          <input type="checkbox" id="set-shake" checked>
+        </div>
+        <div class="setting-row">
+          <label>Aurora glow</label>
+          <input type="checkbox" id="set-aurora" checked>
+        </div>
+        <div class="setting-row">
+          <label>Spiral</label>
+          <input type="checkbox" id="set-spiral">
+        </div>
+        <div class="setting-row">
+          <label>Particles</label>
+          <input type="checkbox" id="set-particles" checked>
+        </div>
+        <div class="setting-row">
+          <label>CRT scanlines</label>
+          <input type="checkbox" id="set-crt">
+        </div>
+        <div class="setting-row">
+          <label>Film grain</label>
+          <input type="checkbox" id="set-grain">
+        </div>
+        <div class="setting-row">
+          <label>VHS wobble</label>
+          <input type="checkbox" id="set-wobble">
+        </div>
+      </section>
+
+      <section>
+        <h4>Interface</h4>
+        <div class="setting-row">
+          <label>Logo</label>
+          <input type="checkbox" id="set-logo" checked>
+        </div>
+        <div class="setting-row">
+          <label>Player controls</label>
+          <input type="checkbox" id="set-dock" checked>
+        </div>
+        <div class="setting-row">
+          <label>Title position <em class="dim-note">drag the title to move it</em></label>
+          <button id="btn-title-center" class="ghost small">Center</button>
+        </div>
+        <div class="setting-row">
+          <label>Custom text</label>
+          <input type="text" id="set-custom-text" maxlength="80" placeholder="Type something…">
+        </div>
+        <div class="setting-row">
+          <label>Show custom text</label>
+          <input type="checkbox" id="set-custom" checked>
+        </div>
+        <div class="setting-row">
+          <label>Custom text position <em class="dim-note">drag the text to move it</em></label>
+          <button id="btn-custom-center" class="ghost small">Center</button>
+        </div>
+      </section>
+
+      <section>
+        <h4>Canvas / output size</h4>
+        <div class="canvas-presets">
+          <button class="ghost small" data-size="1920x1080">1080p</button>
+          <button class="ghost small" data-size="2560x1440">1440p</button>
+          <button class="ghost small" data-size="3840x2160">4K</button>
+          <button class="ghost small" data-size="1080x1080">1:1</button>
+          <button class="ghost small" data-size="1080x1920">9:16</button>
+        </div>
+        <div class="setting-row"><label class="dim-note" id="size-note"></label></div>
+      </section>
+
+      <footer>
+        <button id="btn-reset" class="ghost small">Reset to defaults</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="playlist-overlay" class="overlay hidden">
+    <div class="playlist-panel glass">
+      <header>
+        <h3>Playlist</h3>
+        <div class="playlist-name">
+          <input type="text" id="playlist-name-input" maxlength="60" placeholder="Playlist name">
+        </div>
+        <button id="btn-close-playlist" class="trl" aria-label="Close playlist">&#10005;</button>
+      </header>
+      <div class="playlist-columns">
+        <section class="playlist-col">
+          <header class="playlist-col-header">
+            <h4>Audio</h4>
+            <span class="col-note">plays one after another</span>
+          </header>
+          <input type="text" id="audio-filter" class="playlist-filter" placeholder="Filter audio…" aria-label="Filter audio tracks">
+          <button id="btn-add-audio" class="ghost primary add-media">&#43; Add Audio Files</button>
+          <div id="audio-track-list" class="track-list" data-type="audio"></div>
+          <div class="track-list-empty">Drop audio files here</div>
+        </section>
+        <section class="playlist-col">
+          <header class="playlist-col-header">
+            <h4>Video</h4>
+            <span class="col-note">crossfades on its own loop</span>
+          </header>
+          <input type="text" id="video-filter" class="playlist-filter" placeholder="Filter video…" aria-label="Filter video files">
+          <button id="btn-add-video" class="ghost primary add-media">&#43; Add Video Files</button>
+          <div id="video-track-list" class="track-list" data-type="video"></div>
+          <div class="track-list-empty">Drop video files here</div>
+        </section>
+      </div>
+      <footer class="playlist-footer">
+        <div class="playlist-actions">
+          <button id="btn-clear-audio" class="ghost small">Clear audio</button>
+          <button id="btn-clear-video" class="ghost small">Clear video</button>
+        </div>
+        <div class="playlist-actions">
+          <button id="btn-export-playlist" class="ghost small">Export JSON</button>
+          <button id="btn-import-playlist" class="ghost small">Import JSON</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <div id="color-picker-overlay" class="hidden">
+    <div class="cpicker glass">
+      <div class="cpicker-sl-wrap"><canvas id="cpicker-sl" width="240" height="160"></canvas></div>
+      <div class="cpicker-hue-wrap"><canvas id="cpicker-hue" width="24" height="160"></canvas></div>
+      <div class="cpicker-right">
+        <div class="cpicker-preview"><div id="cpicker-swatch"></div><input type="text" id="cpicker-hex-input" value="#000000" maxlength="7" spellcheck="false" aria-label="Hex color value"></div>
+        <button id="cpicker-close" class="ghost small">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="help-overlay" class="overlay hidden" aria-hidden="true">
+    <div class="help-panel glass" role="dialog" aria-label="Keyboard shortcuts">
+      <header>
+        <h3>Shortcuts</h3>
+        <button id="btn-close-help" class="trl" aria-label="Close shortcuts">&#10005;</button>
+      </header>
+      <section>
+        <div class="help-grid">
+          <div class="help-item"><code>Space</code><span>Play / pause</span></div>
+          <div class="help-item"><code>&#8592; &#8594;</code><span>Seek &#8722;10s / +10s (Shift: 60s)</span></div>
+          <div class="help-item"><code>M</code><span>Mute / unmute</span></div>
+          <div class="help-item"><code>V</code><span>Cycle visualizer (bar / radial / off)</span></div>
+          <div class="help-item"><code>L</code><span>Toggle playlist</span></div>
+          <div class="help-item"><code>F</code><span>Toggle fullscreen</span></div>
+          <div class="help-item"><code>H</code><span>Hide UI</span></div>
+          <div class="help-item"><code>R</code><span>Record screen + audio</span></div>
+          <div class="help-item"><code>?</code><span>Toggle this help</span></div>
+          <div class="help-item"><code>Ctrl&#43;P</code><span>Toggle playlist</span></div>
+          <div class="help-item"><code>Ctrl&#43;O</code><span>Open a track</span></div>
+          <div class="help-item"><code>Ctrl&#44;</code><span>Toggle settings</span></div>
+          <div class="help-item"><code>Esc</code><span>Close overlays / exit fullscreen</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="vendor/jsmediatags.min.js"></script>
+  <script src="renderer/web-api.js"></script>
+  <script src="renderer/color.js"></script>
+  <script src="renderer/util.js"></script>
+  <script src="renderer/playlist.js"></script>
+  <script src="renderer/videobg.js"></script>
+  <script src="renderer/playlistManager.js"></script>
+  <script src="renderer/playlistUI.js"></script>
+  <script src="renderer/effects.js"></script>
+  <script src="renderer/particles.js"></script>
+  <script src="renderer/smoke.js"></script>
+  <script src="renderer/scrubber.js"></script>
+  <script src="renderer/colorPicker.js"></script>
+  <script src="renderer/audio.js"></script>
+  <script src="renderer/recording.js"></script>
+  <script src="renderer/settings.js"></script>
+  <script src="renderer/ui.js"></script>
+  <script src="renderer/help.js"></script>
+  <script src="renderer/renderer.js"></script>
+</body>
+</html>
