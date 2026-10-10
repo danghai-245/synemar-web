@@ -25,7 +25,13 @@
       input.type = 'file';
       if (accept) input.accept = accept;
       if (multiple) input.multiple = true;
-      input.style.display = 'none';
+      input.style.position = 'fixed';
+      input.style.left = '-9999px';
+      input.style.top = '0';
+      input.style.width = '1px';
+      input.style.height = '1px';
+      input.style.opacity = '0';
+      input.style.pointerEvents = 'none';
       document.body.appendChild(input);
       var settled = false;
       function done(files) {
@@ -146,7 +152,7 @@
       return registerFile(file);
     },
     selectAudio: async function () {
-      var files = await pickFiles('audio/*', false);
+      var files = await pickFiles('audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus', false);
       if (!files.length) return null;
       return buildAudioPayload(files[0], registerFile(files[0]));
     },
@@ -156,11 +162,11 @@
       return buildAudioPayload(file, path);
     },
     selectMultipleAudio: async function () {
-      var files = await pickFiles('audio/*', true);
+      var files = await pickFiles('audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac,.opus', true);
       return files.map(function (f) { return { path: registerFile(f), fileName: f.name }; });
     },
     selectMultipleVideo: async function () {
-      var files = await pickFiles('video/*', true);
+      var files = await pickFiles('video/*,.mp4,.webm,.mov,.m4v,.mkv', true);
       return files.map(function (f) { return { path: registerFile(f), fileName: f.name }; });
     },
     savePlaylistFile: async function (json) {
